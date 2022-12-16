@@ -16,6 +16,7 @@ class TagTime:
         self.transparency = transparency
         self.animate = animate
         self.line_orientation = line_orientation
+        self.progressbar = 0
         self.window = window
 
         self.CreateOverlay()
@@ -30,21 +31,23 @@ class TagTime:
         self.window.attributes('-fullscreen', True)
         self.window.configure(background=self.target_color)
         self.window.wm_attributes('-transparent', self.target_color,'-topmost', 1)
+        #self.window.overrideredirect(True)     #Use this to hide from TaskBar
         self.window.update()
-        rootHeight, rootWidth = self.window.winfo_height(), self.window.winfo_width()
+        self.max_height, self.max_width = self.window.winfo_height(), self.window.winfo_width()
         self.window.title("Line")
 
         #Draw Line
-        self.canvasScreen = Canvas(self.window, width = rootWidth, height = rootHeight, bg = self.target_color, highlightthickness=0, borderwidth=0)    
+        self.canvasScreen = Canvas(self.window, width = self.max_width, height = self.max_height, bg = self.target_color, highlightthickness=0, borderwidth=0)    
         self.canvasScreen.pack()
         if line_orientation == "top":
-            self.line = self.canvasScreen.create_line(0,0,rootWidth,0, fill = self.line_color_1, width=self.line_thickness, dash=self.line_dash)
+            line_coordinates = (0, 0, self.max_width, 0)
         elif line_orientation == "bottom":
-            self.line = self.canvasScreen.create_line(0,rootHeight,rootWidth,rootHeight, fill = self.line_color_1, width=self.line_thickness, dash=self.line_dash)
+            line_coordinates = (0, self.max_height, self.max_width, self.max_height)
         elif line_orientation == "right":
-            self.line = self.canvasScreen.create_line(rootWidth,0,rootWidth,rootHeight, fill = self.line_color_1, width=self.line_thickness, dash=self.line_dash)
-        else:
-            self.line = self.canvasScreen.create_line(0,0,0,rootHeight, fill = self.line_color_1, width=self.line_thickness, dash=self.line_dash)
+            line_coordinates = (self.max_width, 0, self.max_width, self.max_height)
+        elif line_orientation == "left":
+            line_coordinates = (0, 0, 0, self.max_height)
+        self.line = self.canvasScreen.create_line(*line_coordinates, fill = self.line_color_1, width=self.line_thickness, dash=self.line_dash)
 
     def SetClickThrough(self):
         hwnd = FindWindow(None, self.window_title)
@@ -61,7 +64,7 @@ class TagTime:
             #Generate range of colors between 2 colors
             start_color = Color(self.line_color_1)
             end_color = Color(self.line_color_2)
-            color_range = list(start_color.range_to(end_color, 50))
+            color_range = list(start_color.range_to(end_color, 50))     
             return color_range
         except:
             import sys
@@ -70,15 +73,16 @@ class TagTime:
 
     #Can animate almost any properties of line
     def AnimateLine(self):
-        for i in self.color_range:
-            self.canvasScreen.itemconfig(self.line, fill= i)
+        def ColorIterator(color):
+            self.canvasScreen.itemconfig(self.line, fill= color)
             time.sleep(0.03)
             self.window.update()
 
+        for i in self.color_range:
+            ColorIterator(i)
+
         for i in reversed(self.color_range):
-            self.canvasScreen.itemconfig(self.line, fill= i)
-            time.sleep(0.03)
-            self.window.update()
+            ColorIterator(i)
 
         self.canvasScreen.after(1, self.AnimateLine)  #(delay ms, fuctions like non blocking while loop)
 
@@ -95,12 +99,12 @@ if __name__ == "__main__":
     line_dash = dash_patterns[0]
 
     orientations = ["top", "bottom", "right", "left"]
-    line_orientation = orientations[0]
+    line_orientation = orientations[3]
 
     line_thickness = 10
     line_color_1 = "yellow"     #Hex
     line_color_2 = "red"        #Hex
-    transparency = 0.9  #From 0 to 1
+    transparency = 0.9          #From 0 to 1
     animate = True
 
     window = Tk()
