@@ -19,8 +19,6 @@ class TagTime:
         self.line_orientation = line_orientation
 
         self.timer = sum([a*b for a,b in zip([3600,60,1], map(int,timer.split(':')))])
-        
-        self.progressbar = 0
         self.times_up = False
 
         self.window = window
@@ -28,30 +26,14 @@ class TagTime:
         self.CreateOverlay()
         self.SetClickThrough()
 
+        # Can animate almost any properties of line
         if self.animate:
-            self.color_range = self.GenerateColors()
-            self.progress_block = int(self.line_coordinates[2] / self.timer)
-            print(self.progress_block)
             self.start_time = time.time()
             self.ProgressBar()
-            self.AnimateLine()
             
-
-    def ProgressBar(self):
-        current_time = time.time()
-        seconds_passed = current_time - self.start_time
-        percent_completed = (seconds_passed/self.timer) * 100
-        progressbar_width = int((percent_completed/100)*self.line_coordinates[2])
-        #print("Percent:{} Width:{}".format(percent_completed, progressbar_width))
-
-        self.line_coordinates[0][self.line_coordinates[1]] = progressbar_width
-        self.canvasScreen.coords(self.line, *self.line_coordinates[0])
-        if percent_completed > 100:
-            print("Time is up")
-            self.times_up = True
-        else:
-            self.canvasScreen.after(100, self.ProgressBar)
-
+            self.color_range = self.GenerateColors()
+            self.ColorIterator()
+            
 
     def CreateOverlay(self):
         self.window.attributes('-alpha', transparency)
@@ -80,6 +62,7 @@ class TagTime:
         self.line = self.canvasScreen.create_line(*self.line_coordinates[0], fill=self.line_color_1, 
                                                     width=self.line_thickness, dash=self.line_dash)
 
+
     def SetClickThrough(self):
         hwnd = FindWindow(None, self.window_title)
         # Get window style and perform a 'bitwise or' operation to make the style layered and transparent, achieving the clickthrough property
@@ -88,6 +71,22 @@ class TagTime:
         SetWindowLong(hwnd, win32con.GWL_EXSTYLE, l_ex_style)
         # Set the window to appear always on top
         SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE)
+
+
+    def ProgressBar(self):
+        current_time = time.time()
+        seconds_passed = current_time - self.start_time
+        percent_completed = (seconds_passed/self.timer) * 100
+        progressbar_width = int((percent_completed/100)*self.line_coordinates[2])
+        #print("Percent:{} Width:{}".format(percent_completed, progressbar_width))
+        self.line_coordinates[0][self.line_coordinates[1]] = progressbar_width
+        self.canvasScreen.coords(self.line, *self.line_coordinates[0])
+        if percent_completed > 100:
+            print("Time is up")
+            self.times_up = True
+        else:
+            self.canvasScreen.after(1, self.ProgressBar)
+
 
     def GenerateColors(self):
         try:
@@ -98,33 +97,25 @@ class TagTime:
             color_range_list = list(start_color.range_to(end_color, 30))
             color_range = color_range_list.copy()
             color_range_list.reverse()
-            print(color_range)
             color_range = color_range + color_range_list
-            print(color_range)
             return color_range
         except:
             import sys
             sys.exit("ERROR: pip install colour package or do animate = False")
 
-    # Can animate almost any properties of line
-    def AnimateLine(self):
-        def ColorIterator(color):
-            self.canvasScreen.itemconfig(self.line, fill=color)
-            time.sleep(0.03)
-            self.window.update()    #To update the GUI
-           
-        for i in self.color_range:
-            ColorIterator(i)
-            #self.canvasScreen.after(1)
 
-        self.canvasScreen.after(1, self.AnimateLine)    # (delay ms, fuctions like non blocking while loop)
+    def ColorIterator(self):
+        for i in self.color_range:
+            self.canvasScreen.itemconfig(self.line, fill=i)
+            time.sleep(0.03)
+            self.window.update()  
+            self.canvasScreen.after(1)
+        self.canvasScreen.after(1, self.ColorIterator)    # (delay ms, fuctions like non blocking while loop)
 
 
     def quit(self, event=None):
         print("quiting...", event)
         self.window.quit()
-
-
 
 
 if __name__ == "__main__":
@@ -146,15 +137,11 @@ if __name__ == "__main__":
     line_color_2 = "red"        # Hex
     transparency = 0.9          # From 0 to 1
     animate = True              # Colour module required
-    timer = "00:04:23"          # Hour:Min:Sec
-
+    timer = "00:00:23"          # Hour:Min:Sec
     
     window = Tk()
     TagTime(window=window, line_color_1=line_color_1, line_color_2=line_color_2,
             line_thickness=line_thickness, line_dash=line_dash, transparency=transparency,
             line_orientation=line_orientation, animate=animate, timer=timer)
 
-
-
     window.mainloop()
-   
