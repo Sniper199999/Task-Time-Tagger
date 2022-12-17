@@ -3,7 +3,6 @@ from tkinter import *
 import win32con
 from win32gui import GetWindowLong, FindWindow, SetWindowLong, SetWindowPos
 
-
 class TagTime:
     def __init__(self, window=None, line_color_1="yellow", line_color_2="red", 
                 line_thickness=10, line_dash=None, transparency=1, animate=False, 
@@ -31,7 +30,28 @@ class TagTime:
 
         if self.animate:
             self.color_range = self.GenerateColors()
+            self.progress_block = int(self.line_coordinates[2] / self.timer)
+            print(self.progress_block)
+            self.start_time = time.time()
+            self.ProgressBar()
             self.AnimateLine()
+            
+
+    def ProgressBar(self):
+        current_time = time.time()
+        seconds_passed = current_time - self.start_time
+        percent_completed = (seconds_passed/self.timer) * 100
+        progressbar_width = int((percent_completed/100)*self.line_coordinates[2])
+        #print("Percent:{} Width:{}".format(percent_completed, progressbar_width))
+
+        self.line_coordinates[0][self.line_coordinates[1]] = progressbar_width
+        self.canvasScreen.coords(self.line, *self.line_coordinates[0])
+        if percent_completed > 100:
+            print("Time is up")
+            self.times_up = True
+        else:
+            self.canvasScreen.after(100, self.ProgressBar)
+
 
     def CreateOverlay(self):
         self.window.attributes('-alpha', transparency)
@@ -75,7 +95,12 @@ class TagTime:
             # Generate range of colors between 2 colors
             start_color = Color(self.line_color_1)
             end_color = Color(self.line_color_2)
-            color_range = list(start_color.range_to(end_color, 50))
+            color_range_list = list(start_color.range_to(end_color, 30))
+            color_range = color_range_list.copy()
+            color_range_list.reverse()
+            print(color_range)
+            color_range = color_range + color_range_list
+            print(color_range)
             return color_range
         except:
             import sys
@@ -85,27 +110,12 @@ class TagTime:
     def AnimateLine(self):
         def ColorIterator(color):
             self.canvasScreen.itemconfig(self.line, fill=color)
-           
-        def Progress():
-            if self.progressbar != self.line_coordinates[2]:
-                self.progressbar += 1
-                self.line_coordinates[0][self.line_coordinates[1]] = self.progressbar
-                self.canvasScreen.coords(self.line, *self.line_coordinates[0])
-            elif not self.times_up:
-                print("Time is up")
-                self.times_up = True
             time.sleep(0.03)
             self.window.update()    #To update the GUI
-
+           
         for i in self.color_range:
             ColorIterator(i)
-            Progress()
-            self.canvasScreen.after(1)
-
-        for i in reversed(self.color_range):
-            ColorIterator(i)
-            Progress()
-            self.canvasScreen.after(1)
+            #self.canvasScreen.after(1)
 
         self.canvasScreen.after(1, self.AnimateLine)    # (delay ms, fuctions like non blocking while loop)
 
@@ -113,6 +123,8 @@ class TagTime:
     def quit(self, event=None):
         print("quiting...", event)
         self.window.quit()
+
+
 
 
 if __name__ == "__main__":
@@ -136,9 +148,13 @@ if __name__ == "__main__":
     animate = True              # Colour module required
     timer = "00:04:23"          # Hour:Min:Sec
 
+    
     window = Tk()
     TagTime(window=window, line_color_1=line_color_1, line_color_2=line_color_2,
             line_thickness=line_thickness, line_dash=line_dash, transparency=transparency,
             line_orientation=line_orientation, animate=animate, timer=timer)
 
+
+
     window.mainloop()
+   
